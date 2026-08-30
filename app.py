@@ -74,9 +74,9 @@ def main():
         st.divider()
         st.write("**Test set performance**")
         test_metrics = bundle["metrics"]["test"]
-        st.write(f"R²: {test_metrics['r2']:.3f}")
-        st.write(f"RMSE: {test_metrics['rmse']:.3f}")
-        st.write(f"MAE: {test_metrics['mae']:.3f}")
+        st.write(f"R²: {test_metrics['r2']:.4f}")
+        st.write(f"RMSE: {test_metrics['rmse']:.4f}")
+        st.write(f"MAE: {test_metrics['mae']:.4f}")
         st.caption(
             "R²/RMSE/MAE are computed on the ln(Cost) scale, matching how the "
             "model was trained and evaluated."
