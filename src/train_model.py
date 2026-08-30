@@ -14,7 +14,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-DATA_PATH = "dataset.xlsx"
+# DATA_PATH = r"C:\Users\user\Desktop\pet_ml_project\Petroleum and Gas Projects\Drilling_Cost_Analysis\dataset.xlsx"
+DATA_PATH = "../dataset.xlsx"
 MODEL_PATH = "model.pkl"
 
 

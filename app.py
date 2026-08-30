@@ -15,7 +15,7 @@ st.set_page_config(page_title="Drilling Cost Predictor", page_icon="🛢️", la
 
 
 @st.cache_resource
-def load_bundle(path: str = "model.pkl"):
+def load_bundle(path: str = "src/model.pkl"):
     return joblib.load(path)
 
 
