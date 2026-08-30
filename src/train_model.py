@@ -10,16 +10,24 @@ Run this once locally (with dataset.xlsx in the same folder) before deploying:
 import numpy as np
 import pandas as pd
 import joblib
+from pathlib import Path
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-# DATA_PATH = r"C:\Users\user\Desktop\pet_ml_project\Petroleum and Gas Projects\Drilling_Cost_Analysis\dataset.xlsx"
-DATA_PATH = "../dataset.xlsx"
-MODEL_PATH = "../model.pkl"
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_PATH = PROJECT_ROOT / "dataset.xlsx"
+MODEL_PATH = PROJECT_ROOT / "model.pkl"
 
 
 def train():
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(
+            f"Could not find dataset.xlsx at {DATA_PATH}. "
+            f"Make sure dataset.xlsx sits in the project root "
+            f"(one level above this script's folder)."
+        )
     df = pd.read_excel(DATA_PATH)
 
     X = df[["Depth"]]
