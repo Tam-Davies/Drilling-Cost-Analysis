@@ -16,7 +16,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # DATA_PATH = r"C:\Users\user\Desktop\pet_ml_project\Petroleum and Gas Projects\Drilling_Cost_Analysis\dataset.xlsx"
 DATA_PATH = "../dataset.xlsx"
-MODEL_PATH = "model.pkl"
+MODEL_PATH = "../model.pkl"
 
 
 def train():
