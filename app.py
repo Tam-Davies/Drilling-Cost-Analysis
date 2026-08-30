@@ -15,7 +15,7 @@ st.set_page_config(page_title="Drilling Cost Predictor", page_icon="🛢️", la
 
 
 @st.cache_resource
-def load_bundle(path: str = "src/model.pkl"):
+def load_bundle(path: str = "model.pkl"):
     return joblib.load(path)
 
 
@@ -35,10 +35,14 @@ def main():
     try:
         bundle = load_bundle()
     except FileNotFoundError:
+        import os
         st.error(
             "model.pkl not found. Run `python train_model.py` (with dataset.xlsx "
             "present) to generate it before launching this app."
         )
+        st.write("**Debug info** (remove after fixing):")
+        st.write(f"Current working directory: `{os.getcwd()}`")
+        st.write(f"Files in this directory: {os.listdir('.')}")
         st.stop()
 
     depth_min = bundle["depth_min"]
