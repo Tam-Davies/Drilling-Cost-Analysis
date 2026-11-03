@@ -1,77 +1,61 @@
-"""
-train_model.py
-Trains the Depth -> ln(Cost) linear regression model from Regression_Analysis.py
-and saves it as model.pkl for the Streamlit app to load.
-
-Run this once locally (with dataset.xlsx in the same folder) before deploying:
-    python train_model.py
-"""
-
 import numpy as np
 import pandas as pd
 import joblib
-from pathlib import Path
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_PATH = PROJECT_ROOT / "dataset.xlsx"
-MODEL_PATH = PROJECT_ROOT / "model.pkl"
+df = pd.read_csv("data/processed/drilling_cost_clean.csv")
 
+X = df[["Depth"]]
+y = df["Cost"]
 
-def train():
-    if not DATA_PATH.exists():
-        raise FileNotFoundError(
-            f"Could not find dataset.xlsx at {DATA_PATH}. "
-            f"Make sure dataset.xlsx sits in the project root "
-            f"(one level above this script's folder)."
-        )
-    df = pd.read_excel(DATA_PATH)
+models = {
+    "Linear Regression": LinearRegression(),
+    "Ridge Regression": Ridge(alpha=1.0),
+    "Lasso Regression": Lasso(alpha=1000.0),
+}
 
-    X = df[["Depth"]]
-    y = df["ln_Cost"]
+results = {}
+trained_models = {}
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+for name, model in models.items():
 
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+    model.fit(X, y)
+    prediction = model.predict(X)
 
-    y_pred_train = model.predict(X_train)
-    y_pred_test = model.predict(X_test)
-
-    metrics = {}
-    for name, y_true, y_pred in [
-        ("train", y_train, y_pred_train),
-        ("test", y_test, y_pred_test),
-    ]:
-        metrics[name] = {
-            "r2": r2_score(y_true, y_pred),
-            "rmse": np.sqrt(mean_squared_error(y_true, y_pred)),
-            "mae": mean_absolute_error(y_true, y_pred),
-        }
-        print(f"\n=== {name.upper()} performance ===")
-        print(f"  R2   : {metrics[name]['r2']:.4f}")
-        print(f"  RMSE : {metrics[name]['rmse']:.4f}")
-        print(f"  MAE  : {metrics[name]['mae']:.4f}")
-
-    # Bundle model + metadata the app needs (feature range for sanity-checking
-    # user input, and the metrics to show on the app's "About" panel).
-    bundle = {
-        "model": model,
-        "intercept": model.intercept_,
-        "slope": model.coef_[0],
-        "depth_min": float(df["Depth"].min()),
-        "depth_max": float(df["Depth"].max()),
-        "metrics": metrics,
+    results[name] = {
+        "MAE": mean_absolute_error(y, prediction),
+        "RMSE": np.sqrt(mean_squared_error(y, prediction)),
+        "R2": r2_score(y, prediction)
     }
 
-    joblib.dump(bundle, MODEL_PATH)
-    print(f"\nSaved model bundle to {MODEL_PATH}")
+    trained_models[name] = model
 
+log_model = LinearRegression()
+log_model.fit(X, np.log(y))
 
-if __name__ == "__main__":
-    train()
+log_prediction = np.exp(log_model.predict(X))
+
+results["Log-Linear Regression"] = {
+    "MAE": mean_absolute_error(y, log_prediction),
+    "RMSE": np.sqrt(mean_squared_error(y, log_prediction)),
+    "R2": r2_score(y, log_prediction)
+}
+
+trained_models["Log-Linear Regression"] = log_model
+
+bundle = {
+    "models": trained_models,
+    "results": results,
+    "depth_min": float(df["Depth"].min()),
+    "depth_max": float(df["Depth"].max())
+}
+
+joblib.dump(bundle, "models/drilling_cost_models.pkl")
+
+pd.DataFrame(results).T.to_csv(
+    "outputs/tables/model_comparison.csv"
+)
+
+print("Models trained and saved.")
