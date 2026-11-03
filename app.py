@@ -3,62 +3,86 @@ import pandas as pd
 import streamlit as st
 import joblib
 
+
+# -----------------------------------
+# Page configuration
+# -----------------------------------
+
 st.set_page_config(
-    page_title="Drilling Cost Predictor",
+    page_title="Bourgoyne Drilling Cost Predictor",
     page_icon="🛢️",
     layout="wide"
 )
 
-# -----------------------------
-# Load data and models
-# -----------------------------
-bundle = joblib.load("models/drilling_cost_models.pkl")
+
+# -----------------------------------
+# Load model bundle
+# -----------------------------------
+
+bundle = joblib.load(
+    "models/drilling_cost_models.pkl"
+)
 
 models = bundle["models"]
 results = pd.DataFrame(bundle["results"]).T
+
 depth_min = bundle["depth_min"]
 depth_max = bundle["depth_max"]
 
-df = pd.read_csv("data/processed/drilling_cost_clean.csv")
+bourgoyne = bundle["bourgoyne"]
 
-# -----------------------------
-# Styling
-# -----------------------------
-st.markdown("""
-<style>
-.main {
-    background-color: #f7f9fc;
-}
+adc = bourgoyne["adc"]
+bdc = bourgoyne["bdc"]
 
-.block-container {
-    padding-top: 2rem;
-}
 
-.title {
-    font-size: 42px;
-    font-weight: 700;
-    margin-bottom: 0;
-}
+# -----------------------------------
+# Load training data
+# -----------------------------------
 
-.subtitle {
-    color: #6b7280;
-    font-size: 18px;
-    margin-bottom: 2rem;
-}
+df = pd.read_csv(
+    "data/processed/drilling_cost_clean.csv"
+)
 
-.metric-card {
-    padding: 1.2rem;
-    border-radius: 12px;
-    background: white;
-    border: 1px solid #e5e7eb;
-}
 
-</style>
-""", unsafe_allow_html=True)
+# -----------------------------------
+# Custom styling
+# -----------------------------------
 
-# -----------------------------
+st.markdown(
+    """
+    <style>
+
+    .main {
+        background-color: #f7f9fc;
+    }
+
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    .title {
+        font-size: 42px;
+        font-weight: 700;
+        margin-bottom: 0;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        font-size: 18px;
+        margin-bottom: 1.5rem;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# -----------------------------------
 # Header
-# -----------------------------
+# -----------------------------------
+
 st.markdown(
     '<div class="title">🛢️ Drilling Cost Predictor</div>',
     unsafe_allow_html=True
@@ -66,14 +90,27 @@ st.markdown(
 
 st.markdown(
     '<div class="subtitle">'
-    'Python-based drilling cost estimation from well depth'
+    'Bourgoyne (1986) drilling-cost relationship implemented in Python'
     '</div>',
     unsafe_allow_html=True
 )
 
-# -----------------------------
+
+# -----------------------------------
+# Engineering basis
+# -----------------------------------
+
+st.info(
+    "Engineering Basis: Bourgoyne (1986) exponential drilling-cost "
+    "relationship. The historical drilling data are used to estimate "
+    "the cost-depth relationship and compare alternative regression models."
+)
+
+
+# -----------------------------------
 # Sidebar
-# -----------------------------
+# -----------------------------------
+
 st.sidebar.header("Prediction Settings")
 
 model_name = st.sidebar.selectbox(
@@ -89,9 +126,11 @@ depth = st.sidebar.number_input(
     step=50.0
 )
 
-# -----------------------------
+
+# -----------------------------------
 # Prediction
-# -----------------------------
+# -----------------------------------
+
 model = models[model_name]
 
 X_new = pd.DataFrame({
@@ -100,17 +139,19 @@ X_new = pd.DataFrame({
 
 prediction = model.predict(X_new)[0]
 
-if model_name == "Log-Linear Regression":
+if model_name == "Bourgoyne / Log-Linear":
     prediction = np.exp(prediction)
 
-# -----------------------------
-# Main result
-# -----------------------------
+
+# -----------------------------------
+# Main metrics
+# -----------------------------------
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric(
-        "Predicted Cost",
+        "Predicted Drilling Cost",
         f"${prediction:,.0f}"
     )
 
@@ -122,23 +163,27 @@ with col2:
 
 with col3:
     st.metric(
-        "Model R²",
+        "R²",
         f"{results.loc[model_name, 'R2']:.4f}"
     )
 
-# -----------------------------
-# Range warning
-# -----------------------------
+
+# -----------------------------------
+# Training range warning
+# -----------------------------------
+
 if depth < depth_min or depth > depth_max:
 
     st.warning(
         f"This depth is outside the training range "
-        f"of {depth_min:,.0f}–{depth_max:,.0f} ft."
+        f"({depth_min:,.0f}–{depth_max:,.0f} ft)."
     )
 
-# -----------------------------
-# Model comparison
-# -----------------------------
+
+# -----------------------------------
+# Model performance
+# -----------------------------------
+
 st.subheader("Model Performance")
 
 comparison = results.copy()
@@ -158,50 +203,87 @@ st.dataframe(
     use_container_width=True
 )
 
-# -----------------------------
-# Data visualization
-# -----------------------------
-st.subheader("Depth vs Drilling Cost")
 
-chart_data = df[["Depth", "Cost"]].copy()
+# -----------------------------------
+# Bourgoyne formulation
+# -----------------------------------
 
-prediction_point = pd.DataFrame({
-    "Depth": [depth],
-    "Cost": [prediction]
-})
+st.subheader("Bourgoyne (1986) Formulation")
+
+st.write(
+    "The Bourgoyne relationship expresses drilling cost as an "
+    "exponential function of well depth:"
+)
+
+st.latex(
+    r"C_{dc} = a_{dc}\exp(b_{dc}s)"
+)
+
+st.write(
+    "For this dataset, Python estimates the Bourgoyne parameters as:"
+)
+
+st.latex(
+    rf"C_{{dc}} = {adc:,.0f}"
+    rf"\exp({bdc:.8f}s)"
+)
+
+
+# -----------------------------------
+# Selected model equation
+# -----------------------------------
+
+st.subheader("Selected Model")
+
+if model_name == "Bourgoyne / Log-Linear":
+
+    st.success(
+        "This model directly represents the Bourgoyne exponential "
+        "cost-depth relationship."
+    )
+
+    st.latex(
+        rf"C_{{dc}} = {adc:,.0f}"
+        rf"\exp({bdc:.8f}s)"
+    )
+
+else:
+
+    st.write(
+        "This is an alternative regression model fitted to the "
+        "same drilling-cost dataset."
+    )
+
+    st.latex(
+        rf"Cost = {model.intercept_:,.2f}"
+        rf" + {model.coef_[0]:.4f}(Depth)"
+    )
+
+
+# -----------------------------------
+# Depth vs cost
+# -----------------------------------
+
+st.subheader("Historical Drilling Data")
 
 st.scatter_chart(
-    chart_data,
+    df,
     x="Depth",
     y="Cost"
 )
 
 st.caption(
-    f"Training data contains {len(df)} completed wells."
+    f"{len(df)} completed wells used for model development."
 )
 
-# -----------------------------
-# Model information
-# -----------------------------
-st.subheader("Selected Model")
 
-if model_name == "Log-Linear Regression":
-
-    st.latex(
-        rf"\ln(Cost) = "
-        rf"{model.intercept_:.6f} + "
-        rf"{model.coef_[0]:.8f}(Depth)"
-    )
-
-else:
-
-    st.latex(
-        rf"Cost = "
-        rf"{model.intercept_:.2f} + "
-        rf"{model.coef_[0]:.4f}(Depth)"
-    )
+# -----------------------------------
+# Project note
+# -----------------------------------
 
 st.info(
-    "This application demonstrates how petroleum engineering "
-    "data can be transformed into simple predictive tools using Python."
+    "This application demonstrates how petroleum engineers can "
+    "use Python to implement an established drilling-cost relationship, "
+    "evaluate alternative regression approaches, and deploy the resulting "
+    "engineering calculation as an interactive application."
 )
